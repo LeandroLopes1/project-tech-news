@@ -1,6 +1,14 @@
+from tech_news.database import search_news
+
+
 # Requisito 6
 def search_by_title(title):
-    """Seu código deve vir aqui"""
+    # https://data-flair.training/blogs/mongodb-regular-expression-regex/
+    title_news = search_news({"title": {"$regex": title, "$options": "i"}})
+    list_news = []
+    for news in title_news:
+        list_news.append((news["title"], news["url"]))
+    return list_news
 
 
 # Requisito 7
