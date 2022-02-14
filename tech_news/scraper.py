@@ -1,6 +1,7 @@
 import requests
 import time
 import parsel
+from .database import create_news
 
 
 # Requisito 1
@@ -35,7 +36,7 @@ def scrape_noticia(html_content):
     selector = parsel.Selector(html_content)
 
     url = selector.css(
-        "link[rel='canonical'][href*='tecmundo.com.br/']::attr(href)").get()
+        "link[rel='canonical']::attr(href)").get()
     title = selector.css("h1.tec--article__header__title::text").get()
     timestamp = selector.xpath("//time[@id='js-article-date']/@datetime").get()
     writer = selector.css(".tec--author__info *:first-child *::text").get()
@@ -44,7 +45,9 @@ def scrape_noticia(html_content):
             "div.tec--timestamp__item.z--font-bold a::text").get()
     # https://stackoverflow.com/questions/34887730/how-to-extract-raw-html-from-a-scrapy-selector
     shares_count = selector.css(".tec--toolbar__item::text").re_first(r"\d+")
-    comments_count = selector.css("svg.feather.z--mr-8::text").re_first(r"\d+")
+    comments_count = int(selector.css(
+        "button#js-comments-btn::attr(data-count)"
+    ).get())
     summary = selector.css(
         ".tec--article__body > p:first-child *::text").getall()
     sources = selector.css(
@@ -76,4 +79,19 @@ def scrape_noticia(html_content):
 
 # Requisito 5
 def get_tech_news(amount):
-    """Seu código deve vir aqui"""
+    url = "https://www.tecmundo.com.br/novidades"
+    links_news = []
+
+    while len(links_news) < amount:
+        html_content = fetch(url)
+        links = scrape_novidades(html_content)
+        links_news.extend(links)
+        url = scrape_next_page_link(html_content)
+    links_news = links_news[:amount]
+    latest_news = []
+    for link in links_news:
+        html_content = fetch(link)
+        latest_news.append(scrape_noticia(html_content))
+
+    create_news(latest_news)
+    return latest_news
